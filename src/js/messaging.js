@@ -19,8 +19,6 @@
     Home: https://github.com/gorhill/uBlock
 */
 
-/* global µBlock, vAPI */
-
 /******************************************************************************/
 /******************************************************************************/
 
@@ -114,6 +112,8 @@ var onMessage = function(request, sender, callback) {
 
     case 'createUserFilter':
         µb.appendUserFilters(request.filters);
+        // https://github.com/gorhill/uBlock/issues/1786
+        µb.cosmeticFilteringEngine.removeFromSelectorCache(request.pageDomain);
         break;
 
     case 'forceUpdateAssets':
@@ -493,13 +493,8 @@ var filterRequests = function(pageStore, details) {
     while ( i-- ) {
         request = requests[i];
         context.requestURL = punycodeURL(request.url);
-        // https://github.com/gorhill/uBlock/issues/978
-        // Ignore invalid URLs: these would not occur on the HTTP
-        // observer side.
-        if ( (context.requestHostname = hostnameFromURI(request.url)) === '' ) {
-            continue;
-        }
         context.requestType = tagNameToRequestTypeMap[request.tagName];
+        context.requestHostname = hostnameFromURI(request.url);
         r = pageStore.filterRequest(context);
         if ( typeof r !== 'string' || r.charAt(1) !== 'b' ) {
             continue;
@@ -510,6 +505,8 @@ var filterRequests = function(pageStore, details) {
         }
         request.collapse = true;
     }
+
+    context.dispose();
     return requests;
 };
 
@@ -603,6 +600,7 @@ var onMessage = function(request, sender, callback) {
                 create: vAPI.i18n('pickerCreate'),
                 pick: vAPI.i18n('pickerPick'),
                 quit: vAPI.i18n('pickerQuit'),
+                preview: vAPI.i18n('pickerPreview'),
                 netFilters: vAPI.i18n('pickerNetFilters'),
                 cosmeticFilters: vAPI.i18n('pickerCosmeticFilters'),
                 cosmeticFiltersHint: vAPI.i18n('pickerCosmeticFiltersHint')

@@ -1,7 +1,7 @@
 /*******************************************************************************
 
-    uBlock - a browser extension to block requests.
-    Copyright (C) 2014-2015 Raymond Hill
+    uBlock Origin - a browser extension to block requests.
+    Copyright (C) 2014-2016 Raymond Hill
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,15 +19,13 @@
     Home: https://github.com/gorhill/uBlock
 */
 
-/* global µBlock, vAPI */
+'use strict';
 
 /******************************************************************************/
 
 // Start isolation from global scope
 
 µBlock.webRequest = (function() {
-
-'use strict';
 
 /******************************************************************************/
 
@@ -45,6 +43,12 @@ var onBeforeRequest = function(details) {
     var requestType = details.type;
     if ( requestType === 'main_frame' ) {
         return onBeforeRootFrameRequest(details);
+    }
+
+    // https://github.com/gorhill/uBlock/issues/870
+    // This work for Chromium 49+.
+    if ( requestType === 'beacon' ) {
+        return onBeforeBeacon(details);
     }
 
     // Special treatment: behind-the-scene requests
@@ -109,6 +113,7 @@ var onBeforeRequest = function(details) {
         if ( frameId > 0 && isFrame ) {
             pageStore.setFrame(frameId, requestURL);
         }
+        requestContext.dispose();
         return;
     }
 
@@ -135,9 +140,11 @@ var onBeforeRequest = function(details) {
                 requestContext.pageHostname
             );
         }
+        requestContext.dispose();
         return { redirectUrl: url };
     }
 
+    requestContext.dispose();
     return { cancel: true };
 };
 
@@ -273,6 +280,41 @@ var toBlockDocResult = function(url, hostname, result) {
 
 /******************************************************************************/
 
+// https://github.com/gorhill/uBlock/issues/870
+// Finally, Chromium 49+ gained the ability to report network request of type
+// `beacon`, so now we can block them according to the state of the
+// "Disable hyperlink auditing/beacon" setting.
+
+var onBeforeBeacon = function(details) {
+    var µb = µBlock;
+    var tabId = details.tabId;
+    var pageStore = µb.mustPageStoreFromTabId(tabId);
+    var context = pageStore.createContextFromPage();
+    context.requestURL = details.url;
+    context.requestHostname = µb.URI.hostnameFromURI(details.url);
+    context.requestType = details.type;
+    // "g" in "gb:" stands for "global setting"
+    var result = µb.userSettings.hyperlinkAuditingDisabled ? 'gb:' : '';
+    pageStore.logRequest(context, result);
+    if ( µb.logger.isEnabled() ) {
+        µb.logger.writeOne(
+            tabId,
+            'net',
+            result,
+            details.type,
+            details.url,
+            context.rootHostname,
+            context.rootHostname
+        );
+    }
+    context.dispose();
+    if ( result !== '' ) {
+        return { cancel: true };
+    }
+};
+
+/******************************************************************************/
+
 // Intercept and filter behind-the-scene requests.
 
 var onBeforeBehindTheSceneRequest = function(details) {
@@ -310,6 +352,8 @@ var onBeforeBehindTheSceneRequest = function(details) {
             context.rootHostname
         );
     }
+
+    context.dispose();
 
     // Not blocked
     if ( µb.isAllowResult(result) ) {
@@ -385,6 +429,8 @@ var onRootFrameHeadersReceived = function(details) {
         );
     }
 
+    context.dispose();
+
     // Don't block
     if ( µb.isAllowResult(result) ) {
         return;
@@ -430,6 +476,8 @@ var onFrameHeadersReceived = function(details) {
             context.pageHostname
         );
     }
+
+    context.dispose();
 
     // Don't block
     if ( µb.isAllowResult(result) ) {

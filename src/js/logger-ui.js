@@ -546,8 +546,8 @@ var renderLogEntry = function(entry) {
     }
 
     rowFilterer.filterOne(tr, true);
-
     tbody.insertBefore(tr, tbody.firstChild);
+    return tr;
 };
 
 /******************************************************************************/
@@ -565,14 +565,16 @@ var renderLogEntries = function(response) {
 
     var tabIds = response.tabIds;
     var n = entries.length;
-    var entry;
+    var entry, tr;
     for ( var i = 0; i < n; i++ ) {
         entry = entries[i];
-        // Unlikely, but it may happen
+        tr = renderLogEntry(entries[i]);
+        // https://github.com/gorhill/uBlock/issues/1613#issuecomment-217637122
+        // Unlikely, but it may happen: mark as void if associated tab no
+        // longer exist.
         if ( entry.tab && tabIds.hasOwnProperty(entry.tab) === false ) {
-            continue;
+            tr.classList.remove('canMtx');
         }
-        renderLogEntry(entries[i]);
     }
 
     // Prevent logger from growing infinitely and eating all memory. For
@@ -970,6 +972,7 @@ var netFilteringManager = (function() {
                     'loggerUI',
                     {
                         what: 'createUserFilter',
+                        pageDomain: targetPageDomain,
                         filters: '! ' + d.toLocaleString() + ' ' + targetPageDomain + '\n' + value
                     }
                 );
@@ -1133,6 +1136,17 @@ var netFilteringManager = (function() {
         container.appendChild(preview);
     };
 
+    // https://github.com/gorhill/uBlock/issues/1511
+    var shortenLongString = function(url, max) {
+        var urlLen = url.length;
+        if ( urlLen <= max ) {
+            return url;
+        }
+        var n = urlLen - max - 1;
+        var i = (urlLen - n) / 2 | 0;
+        return url.slice(0, i) + '…' + url.slice(i + n);
+    };
+
     // Build list of candidate URLs
     var createTargetURLs = function(url) {
         var urls = [];
@@ -1185,7 +1199,7 @@ var netFilteringManager = (function() {
             url = targetURLs[i];
             menuEntry = menuEntryTemplate.cloneNode(true);
             menuEntry.cells[0].children[0].setAttribute('data-url', url);
-            menuEntry.cells[1].textContent = url;
+            menuEntry.cells[1].textContent = shortenLongString(url, 128);
             tbody.appendChild(menuEntry);
         }
 
@@ -1268,7 +1282,7 @@ var netFilteringManager = (function() {
                     value = targetURLs[i].replace(/^[a-z]+:\/\//, '');
                     option = document.createElement('option');
                     option.setAttribute('value', value);
-                    option.textContent = value;
+                    option.textContent = shortenLongString(value, 128);
                     select.appendChild(option);
                 }
                 nodes.push(select);

@@ -64,7 +64,7 @@
     "description":"English: or"
   },
   "popupTipDashboard":{
-    "message":"Hap pultin e programit duket klikuar",
+    "message":"Hap pultin e programit duke klikuar",
     "description":"English: Click to open the dashboard"
   },
   "popupTipPicker":{
@@ -158,6 +158,10 @@
   "pickerQuit":{
     "message":"Mbyll",
     "description":"English: Quit"
+  },
+  "pickerPreview":{
+    "message":"Parashikoj",
+    "description":"Element picker preview mode: will cause the elements matching the current filter to be removed from the page"
   },
   "pickerNetFilters":{
     "message":"Filtrat e rrjetit",

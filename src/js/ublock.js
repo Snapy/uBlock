@@ -1,7 +1,7 @@
 /*******************************************************************************
 
-    µBlock - a browser extension to block requests.
-    Copyright (C) 2014 Raymond Hill
+    uBlock Origin - a browser extension to block requests.
+    Copyright (C) 2014-2016 Raymond Hill
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,8 +18,6 @@
 
     Home: https://github.com/gorhill/uBlock
 */
-
-/* global vAPI, µBlock */
 
 /******************************************************************************/
 
@@ -55,6 +53,7 @@ var matchWhitelistDirective = function(url, hostname, directive) {
     if ( directive.indexOf('*') === -1 ) {
         return url === directive;
     }
+    // TODO: Revisit implementation to avoid creating a regex each time.
     // Regex escape code inspired from:
     //   "Is there a RegExp.escape function in Javascript?"
     //   http://stackoverflow.com/a/3561711
@@ -177,7 +176,7 @@ var matchWhitelistDirective = function(url, hostname, directive) {
         '#': []
     };
     var reInvalidHostname = /[^a-z0-9.\-\[\]:]/;
-    var reHostnameExtractor = /([a-z0-9\[][a-z0-9.\-:]*[a-z0-9\]])\/(?:[^\x00-\x20\/]|$)[^\x00-\x20]*$/;
+    var reHostnameExtractor = /([a-z0-9\[][a-z0-9.\-]*[a-z0-9\]])(?::[\d*]+)?\/(?:[^\x00-\x20\/]|$)[^\x00-\x20]*$/;
     var lines = s.split(/[\n\r]+/);
     var line, matches, key, directive;
     for ( var i = 0; i < lines.length; i++ ) {
@@ -283,8 +282,6 @@ var matchWhitelistDirective = function(url, hostname, directive) {
     case 'contextMenuEnabled':
         this.contextMenu.update(null);
         break;
-    case 'experimentalEnabled':
-        break;
     case 'hyperlinkAuditingDisabled':
         vAPI.browserSettings.set({ 'hyperlinkAuditing': !value });
         break;
@@ -334,24 +331,38 @@ var matchWhitelistDirective = function(url, hostname, directive) {
 /******************************************************************************/
 
 µBlock.toggleFirewallRule = function(details) {
+    var requestType = details.requestType;
+
     if ( details.action !== 0 ) {
-        this.sessionFirewall.setCellZ(details.srcHostname, details.desHostname, details.requestType, details.action);
+        this.sessionFirewall.setCellZ(details.srcHostname, details.desHostname, requestType, details.action);
     } else {
-        this.sessionFirewall.unsetCell(details.srcHostname, details.desHostname, details.requestType);
+        this.sessionFirewall.unsetCell(details.srcHostname, details.desHostname, requestType);
     }
 
     // https://github.com/chrisaljoudi/uBlock/issues/731#issuecomment-73937469
     if ( details.persist ) {
         if ( details.action !== 0 ) {
-            this.permanentFirewall.setCellZ(details.srcHostname, details.desHostname, details.requestType, details.action);
+            this.permanentFirewall.setCellZ(details.srcHostname, details.desHostname, requestType, details.action);
         } else {
-            this.permanentFirewall.unsetCell(details.srcHostname, details.desHostname, details.requestType, details.action);
+            this.permanentFirewall.unsetCell(details.srcHostname, details.desHostname, requestType, details.action);
         }
         this.savePermanentFirewallRules();
     }
 
+    // https://github.com/gorhill/uBlock/issues/1662
+    // Flush all cached `net` cosmetic filters if we are dealing with a
+    // collapsible type: any of the cached entries could be a resource on the
+    // target page.
+    var srcHostname = details.srcHostname;
+    if (
+        (srcHostname !== '*') &&
+        (requestType === '*' || requestType === 'image' || requestType === '3p' || requestType === '3p-frame')
+    ) {
+        srcHostname = '*';
+    }
+
     // https://github.com/chrisaljoudi/uBlock/issues/420
-    this.cosmeticFilteringEngine.removeFromSelectorCache(details.srcHostname, 'net');
+    this.cosmeticFilteringEngine.removeFromSelectorCache(srcHostname, 'net');
 };
 
 /******************************************************************************/

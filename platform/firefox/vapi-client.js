@@ -53,9 +53,62 @@ self.rpc = self.rpc || function(){};
 /******************************************************************************/
 
 var vAPI = self.vAPI = self.vAPI || {};
+
+/******************************************************************************/
+
+vAPI.executionCost = {
+    start: function(){},
+    stop: function(){}
+};
+/*
+vAPI.executionCost = vAPI.executionCost || {
+    tcost: 0,
+    tstart: 0,
+    nstart: 0,
+    level: 1,
+    start: function() {
+        if ( this.nstart === 0 ) {
+            this.tstart = window.performance.now();
+        }
+        this.nstart += 1;
+    },
+    stop: function(mark) {
+        this.nstart -= 1;
+        if ( this.nstart !== 0 ) {
+            return;
+        }
+        var tcost = window.performance.now() - this.tstart;
+        this.tcost += tcost;
+        if ( mark === undefined ) {
+            return;
+        }
+        var top = window === window.top;
+        if ( !top && this.level < 2 ) {
+            return;
+        }
+        var context = window === window.top ? '  top' : 'frame';
+        var percent = this.tcost / window.performance.now() * 100;
+        console.log(
+            'uBO cost (' + context + '): ' +
+            this.tcost.toFixed(1) + 'ms/' +
+            percent.toFixed(1) + '% (' +
+            mark + ': ' + tcost.toFixed(2) + 'ms)'
+        );
+    }
+};
+*/
+vAPI.executionCost.start();
+
+/******************************************************************************/
+
 vAPI.firefox = true;
-vAPI.sessionId = String.fromCharCode(Date.now() % 26 + 97) +
-    Math.random().toString(36).slice(2);
+
+vAPI.randomToken = function() {
+    return String.fromCharCode(Date.now() % 26 + 97) +
+           Math.floor(Math.random() * 982451653 + 982451653).toString(36);
+};
+
+vAPI.sessionId = vAPI.randomToken();
 
 /******************************************************************************/
 
@@ -192,6 +245,17 @@ vAPI.messaging = {
             this.stop();
             if ( typeof self.outerShutdown === 'function' ) {
                 outerShutdown();
+            }
+            // https://github.com/gorhill/uBlock/issues/1573
+            // Will let uBO's own web pages close themselves. `window.top` is
+            // used on the assumption that uBO's own web pages will never be
+            // embedded in anything else than its own documents.
+            try {
+                var top = window.top;
+                if ( top.location.href.startsWith(vAPI.getURL('')) ) {
+                    top.close();
+                }
+            } catch (ex) {
             }
             return;
         }
@@ -367,6 +431,10 @@ vAPI.messaging.start();
 if ( window !== window.top ) {
     // Can anything be done?
 }
+
+/******************************************************************************/
+
+vAPI.executionCost.stop('vapi-client.js');
 
 /******************************************************************************/
 

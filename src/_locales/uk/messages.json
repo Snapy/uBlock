@@ -68,7 +68,7 @@
     "description":"English: Click to open the dashboard"
   },
   "popupTipPicker":{
-    "message":"Перейти у режим вибору элементів",
+    "message":"Перейти у режим вибору елементів",
     "description":"English: Enter element picker mode"
   },
   "popupTipLog":{
@@ -80,7 +80,7 @@
     "description":"Tooltip for the no-popups per-site switch"
   },
   "popupTipNoLargeMedia":{
-    "message":"Перемкнути блокування великих медіа елементів для цього сайту",
+    "message":"Увімк\/Вимк блокування великих медіа елементів на цьому сайті",
     "description":"Tooltip for the no-large-media per-site switch"
   },
   "popupTipNoCosmeticFiltering":{
@@ -159,6 +159,10 @@
     "message":"Вийти",
     "description":"English: Quit"
   },
+  "pickerPreview":{
+    "message":"Попередній перегляд",
+    "description":"Element picker preview mode: will cause the elements matching the current filter to be removed from the page"
+  },
   "pickerNetFilters":{
     "message":"Мережні фільтри",
     "description":"English: Net filters"
@@ -216,7 +220,7 @@
     "description":"English: "
   },
   "settingPerSiteSwitchGroup":{
-    "message":"Стандартні налаштування",
+    "message":"Стандартна поведінка",
     "description":""
   },
   "settingPerSiteSwitchGroupSynopsis":{
@@ -232,7 +236,7 @@
     "description":""
   },
   "settingsNoRemoteFontsPrompt":{
-    "message":"Блокувати завантаження шрифтів",
+    "message":"Блокувати сторонні шрифти",
     "description":""
   },
   "settingsStorageUsed":{
